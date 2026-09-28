@@ -3,10 +3,11 @@ FROM php:$PHP_VERSION-cli
 MAINTAINER Zbigniew Łabacz <zbigniew.labacz@gmail.com>
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV COMPOSER_VERSION=2.7.7
+ENV COMPOSER_VERSION=latest-2.x
 ENV SHARED_UID=1000
+ENV SHARED_GID=1000
 
-RUN apt-get update && apt-get install -y zip unzip libzip-dev libpng-dev libicu-dev zlib1g-dev libxml2-dev libxslt-dev
+RUN apt-get update && apt-get install -y zip unzip libzip-dev libpng-dev libicu-dev zlib1g-dev libxml2-dev libxslt-dev gosu
 RUN docker-php-ext-install intl \
   && docker-php-ext-install zip \
   && docker-php-ext-install bcmath \
@@ -22,10 +23,13 @@ RUN docker-php-ext-install intl \
   && docker-php-ext-install xsl
 RUN curl https://getcomposer.org/download/$COMPOSER_VERSION/composer.phar -o /usr/local/bin/composer \
   && chmod +x /usr/local/bin/composer
-RUN usermod -u $SHARED_UID www-data \
-  && chsh -s /bin/bash www-data
-RUN mkdir -p /var/www/.composer
 
-COPY auth.json /var/www/.composer
+RUN chsh -s /bin/bash www-data \
+  && mkdir -p /var/www/.composer \
+  && [ -n $SHARED_UID ] && usermod -u $SHARED_UID www-data \
+  && [ -n $SHARED_GID ] && groupmod -g $SHARED_GID www-data
+
+# Wildcard is intentional (walkaround for not existence of auth.json)
+COPY auth*.json /var/www/.composer
 
 WORKDIR /var/www
